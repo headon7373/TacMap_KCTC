@@ -51,7 +51,7 @@ class ObjectiveMarker extends StatelessWidget {
   }
 }
 
-/// 팀 리스폰(베이스) 지점. 거점과 구분되도록 사각 배지로 그린다.
+/// 분대 리스폰 지점. 거점과 구분되도록 사각 배지로 그린다.
 class SpawnMarker extends StatelessWidget {
   const SpawnMarker({
     super.key,

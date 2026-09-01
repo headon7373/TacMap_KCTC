@@ -6,7 +6,7 @@ import '../services/room_service.dart';
 import 'map_screen.dart';
 
 /// 로비. 가로 화면을 좌우로 나눈다.
-/// 왼쪽 = 팀 편성 현황(스크롤 없음), 오른쪽 = 전체 아군 명단 표(세로 스크롤).
+/// 왼쪽 = 분대 편성 현황(스크롤 없음), 오른쪽 = 전체 아군 명단 표(세로 스크롤).
 class LobbyScreen extends StatelessWidget {
   const LobbyScreen({super.key, required this.service, required this.code});
 
@@ -187,7 +187,7 @@ class _TeamPane extends StatelessWidget {
         children: [
           const Padding(
             padding: EdgeInsets.only(left: 4, bottom: 4),
-            child: Text('팀 편성', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: Text('분대 편성', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
           for (final t in teams)
             Expanded(
@@ -213,7 +213,7 @@ class _TeamPane extends StatelessWidget {
                   child: OutlinedButton.icon(
                     onPressed: () => _addTeam(context),
                     icon: const Icon(Icons.add, size: 16),
-                    label: const Text('팀'),
+                    label: const Text('분대'),
                   ),
                 ),
                 const SizedBox(width: 6),
@@ -222,7 +222,7 @@ class _TeamPane extends StatelessWidget {
                     onPressed:
                         teams.isEmpty ? null : () => _removeTeam(context),
                     icon: const Icon(Icons.remove, size: 16),
-                    label: const Text('팀'),
+                    label: const Text('분대'),
                   ),
                 ),
               ],
@@ -234,7 +234,7 @@ class _TeamPane extends StatelessWidget {
   }
 
   Future<void> _addTeam(BuildContext context) async {
-    final name = await promptText(context, title: '팀 추가', hint: '팀 이름');
+    final name = await promptText(context, title: '분대 추가', hint: '분대 이름');
     if (name == null || name.isEmpty) return;
     await service.addTeam(
       code: code,
@@ -252,7 +252,7 @@ class _TeamPane extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const ListTile(title: Text('삭제할 팀 선택')),
+              const ListTile(title: Text('삭제할 분대 선택')),
               for (final t in teams)
                 ListTile(
                   leading: CircleAvatar(backgroundColor: t.color, radius: 10),
@@ -408,7 +408,7 @@ class _RosterPane extends StatelessWidget {
               if (isHost) ...[
                 ListTile(
                   leading: const Icon(Icons.swap_horiz),
-                  title: const Text('팀 배정'),
+                  title: const Text('분대 배정'),
                   onTap: () {
                     Navigator.of(sheetContext).pop();
                     _assign(context, member);
@@ -512,7 +512,7 @@ class _RosterPane extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const ListTile(title: Text('팀 선택')),
+              const ListTile(title: Text('분대 선택')),
               for (final t in teams)
                 ListTile(
                   leading: CircleAvatar(backgroundColor: t.color, radius: 10),
@@ -561,7 +561,7 @@ class _RosterHeader extends StatelessWidget {
         children: [
           SizedBox(width: 34, child: Text('번호', style: style)),
           Expanded(flex: 3, child: Text('이름', style: style)),
-          Expanded(flex: 2, child: Text('팀', style: style)),
+          Expanded(flex: 2, child: Text('분대', style: style)),
           Expanded(flex: 3, child: Text('소속', style: style)),
         ],
       ),

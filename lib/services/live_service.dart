@@ -62,7 +62,7 @@ class LiveService {
         // 안드로이드는 알림을 띄운 앱에만 백그라운드 위치를 계속 준다.
         foregroundNotificationConfig: const ForegroundNotificationConfig(
           notificationTitle: 'TacMap 위치 공유 중',
-          notificationText: '팀에 내 위치를 보내는 중입니다',
+          notificationText: '분대에 내 위치를 보내는 중입니다',
           enableWakeLock: true,
           setOngoing: true,
         ),
@@ -176,6 +176,24 @@ class LiveService {
 
   Future<void> removeObjective(String id) =>
       _room.child('objectives/$id').remove();
+
+  /// 운영자용 전체 기록. 누가 언제 무엇을 했는지 되짚을 때 쓴다.
+  /// 점령 상태를 잘못 눌러도 누가 바꿨는지 남기 때문에 되돌릴 수 있다.
+  Future<List<GameEvent>> fullLog({int limit = 500}) async {
+    final snapshot =
+        await _room.child('events').orderByChild('ts').limitToLast(limit).get();
+    final value = snapshot.value;
+    if (value is! Map) return const [];
+    final list = value.entries
+        .where((e) => e.value is Map)
+        .map((e) => GameEvent.fromMap(
+              e.key as String,
+              (e.value as Map).cast<Object?, Object?>(),
+            ))
+        .toList()
+      ..sort((a, b) => b.timestamp.compareTo(a.timestamp));
+    return list;
+  }
 
   // ---- 리스폰 지점 (방장 전용) ----
 
@@ -301,7 +319,7 @@ class LiveService {
         return list;
       });
 
-  /// 최근 이벤트만. 게임 내내 쌓인 걸 다 받아올 이유가 없다.
+  /// 최근 이벤트. 지도 화면은 적은 수만, 운영 로그는 많이 받아 본다.
   Stream<List<GameEvent>> eventsStream({int limit = 50}) => _room
       .child('events')
       .orderByChild('ts')

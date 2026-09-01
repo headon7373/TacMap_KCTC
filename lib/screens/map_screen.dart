@@ -431,7 +431,7 @@ class _MapScreenState extends State<MapScreen> {
                 ),
               ),
               const Divider(),
-              const ListTile(title: Text('팀 리스폰(베이스) 지점')),
+              const ListTile(title: Text('분대 리스폰 지점')),
               for (final t in _teams)
                 ListTile(
                   dense: true,
@@ -461,6 +461,16 @@ class _MapScreenState extends State<MapScreen> {
                     ],
                   ),
                 ),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.history),
+                title: const Text('전체 기록'),
+                subtitle: const Text('누가 언제 사망했고 거점을 누가 바꿨는지'),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  _openLog();
+                },
+              ),
               const Divider(),
               const ListTile(
                 title: Text('필드 프리셋'),
@@ -507,6 +517,70 @@ class _MapScreenState extends State<MapScreen> {
       await _live.setBoundary(next);
     }
     _showToast('경계 점 ${next.length}개');
+  }
+
+  /// 운영자용 전체 기록. 시각까지 찍어서 사후에 되짚을 수 있게 한다.
+  Future<void> _openLog() async {
+    final log = await _live.fullLog();
+    if (!mounted) return;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) => SafeArea(
+        child: DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.9,
+          builder: (context, controller) => Column(
+            children: [
+              ListTile(
+                leading: const Icon(Icons.history),
+                title: const Text('전체 기록'),
+                subtitle: Text('${log.length}건'),
+              ),
+              const Divider(height: 1),
+              Expanded(
+                child: log.isEmpty
+                    ? const Center(child: Text('아직 기록이 없습니다'))
+                    : ListView.builder(
+                        controller: controller,
+                        itemCount: log.length,
+                        itemBuilder: (context, i) {
+                          final e = log[i];
+                          final time =
+                              DateTime.fromMillisecondsSinceEpoch(e.timestamp);
+                          return ListTile(
+                            dense: true,
+                            leading: Icon(
+                              switch (e.type) {
+                                EventType.objective => Icons.flag,
+                                EventType.death => Icons.person_off,
+                                EventType.revive => Icons.refresh,
+                              },
+                              size: 18,
+                              color: switch (e.type) {
+                                EventType.objective => Colors.amber,
+                                EventType.death => Colors.redAccent,
+                                EventType.revive => Colors.greenAccent,
+                              },
+                            ),
+                            title: Text(e.message),
+                            trailing: Text(
+                              clockTime(time),
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.white70,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _addObjective() async {
@@ -598,7 +672,7 @@ class _MapScreenState extends State<MapScreen> {
           builder: (context, controller) => ListView(
             controller: controller,
             children: [
-              const ListTile(title: Text('팀원 현황')),
+              const ListTile(title: Text('분대원 현황')),
               const Divider(height: 1),
               for (final team in _teams) ...[
                 _sectionHeader(team.name, team.color),
@@ -1084,6 +1158,12 @@ IconData markIcon(MarkType type) => switch (type) {
       MarkType.danger => Icons.warning,
       MarkType.rally => Icons.groups,
     };
+
+/// 기록에는 상대 시간보다 실제 시각이 낫다. 무전 기록과 맞춰봐야 하기 때문.
+String clockTime(DateTime time) =>
+    '${time.hour.toString().padLeft(2, '0')}:'
+    '${time.minute.toString().padLeft(2, '0')}:'
+    '${time.second.toString().padLeft(2, '0')}';
 
 String ago(DateTime time) {
   final diff = DateTime.now().difference(time);

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../services/permissions.dart';
 import '../services/room_service.dart';
 import 'lobby_screen.dart';
 
@@ -62,6 +63,13 @@ class _StartScreenState extends State<StartScreen> {
       _error = null;
     });
 
+    // 지도 화면에 들어가서야 권한을 묻는 건 늦다. 게임 직전에 권한 창이 뜨면 곤란하다.
+    final outcome = await _checkPermissions();
+    if (!canPlay(outcome)) {
+      if (mounted) setState(() => _busy = false);
+      return;
+    }
+
     try {
       final code = await action();
       final prefs = await SharedPreferences.getInstance();
@@ -77,6 +85,40 @@ class _StartScreenState extends State<StartScreen> {
     } finally {
       if (mounted) setState(() => _busy = false);
     }
+  }
+
+  /// 권한을 왜 필요로 하는지 먼저 설명하고 요청한다.
+  /// 이유 없이 시스템 창부터 띄우면 반사적으로 거부하게 된다.
+  Future<PermissionOutcome> _checkPermissions() async {
+    final outcome = await ensureGamePermissions();
+    if (!mounted || outcome == PermissionOutcome.ready) return outcome;
+
+    final message = permissionMessage(outcome);
+    final blocked = outcome == PermissionOutcome.locationBlocked;
+
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(canPlay(outcome) ? '알림 권한 없음' : '권한이 필요합니다'),
+        content: Text(message),
+        actions: [
+          if (blocked)
+            TextButton(
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                openPermissionSettings();
+              },
+              child: const Text('설정 열기'),
+            ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: Text(canPlay(outcome) ? '그대로 진행' : '확인'),
+          ),
+        ],
+      ),
+    );
+    if (mounted && !canPlay(outcome)) setState(() => _error = message);
+    return outcome;
   }
 
   @override

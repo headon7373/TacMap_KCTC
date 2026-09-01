@@ -53,3 +53,7 @@ lib/firebase_options.dart
 android/app/google-services.json
 .firebaserc
 firebase-debug.log
+
+# 서명 키 정보 — 저장소에 올리지 않는다.
+android/key.properties
+*.jks
