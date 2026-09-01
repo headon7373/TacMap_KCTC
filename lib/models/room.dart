@@ -54,27 +54,44 @@ class Team {
 }
 
 /// 방에 들어온 사람. uid는 익명 로그인으로 발급된 고유 ID.
+/// 대회 명단이 등번호·소속대학·이름으로 오기 때문에 그 세 가지를 그대로 담는다.
 class Member {
   const Member({
     required this.uid,
     required this.callsign,
+    required this.number,
+    required this.school,
     required this.teamId,
     required this.isHost,
     required this.joinedAt,
   });
 
   final String uid;
+
+  /// 이름. 무전에서 부르는 호칭이기도 하다.
   final String callsign;
+
+  /// 등번호. 없으면 빈 문자열.
+  final String number;
+
+  /// 소속 대학. 없으면 빈 문자열.
+  final String school;
 
   /// 아직 팀 배정 전이면 null
   final String? teamId;
   final bool isHost;
   final int joinedAt;
 
+  /// 명단에 쓰는 한 줄 표기. 등번호가 있으면 앞에 붙인다.
+  String get displayName =>
+      number.isEmpty ? callsign : '$number $callsign';
+
   factory Member.fromMap(String uid, Map<Object?, Object?> map) {
     return Member(
       uid: uid,
       callsign: (map['callsign'] ?? '?') as String,
+      number: (map['number'] ?? '') as String,
+      school: (map['school'] ?? '') as String,
       teamId: map['teamId'] as String?,
       isHost: (map['isHost'] ?? false) as bool,
       joinedAt: (map['joinedAt'] as num?)?.toInt() ?? 0,

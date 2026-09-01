@@ -78,6 +78,7 @@ class _MapScreenState extends State<MapScreen> {
   bool _mapReady = false;
   bool _sharing = false;
   String? _toast;
+  double _holdProgress = 0;
   DateTime _now = DateTime.now();
 
   String get _uid => widget.service.uid;
@@ -866,6 +867,15 @@ class _MapScreenState extends State<MapScreen> {
 
           const IgnorePointer(child: Center(child: _Crosshair())),
 
+          // 홀드 게이지는 화면 한가운데. 버튼 위에 그리면 손가락에 가린다.
+          if (_holdProgress > 0)
+            HoldGauge(
+              progress: _holdProgress,
+              label: _amDead ? '복귀 처리' : '사망 처리',
+              color: _amDead ? Colors.greenAccent : Colors.redAccent,
+              seconds: 3,
+            ),
+
           SafeArea(
             child: Stack(
               children: [
@@ -897,6 +907,7 @@ class _MapScreenState extends State<MapScreen> {
                   child: _LeftPanel(
                     dead: _amDead,
                     markType: _markType,
+                    onHoldProgress: (v) => setState(() => _holdProgress = v),
                     onHoldDead: _toggleDead,
                     onMark: _placeMark,
                     onHoldMark: _pickMarkType,
@@ -1166,6 +1177,7 @@ class _LeftPanel extends StatelessWidget {
   const _LeftPanel({
     required this.dead,
     required this.markType,
+    required this.onHoldProgress,
     required this.onHoldDead,
     required this.onMark,
     required this.onHoldMark,
@@ -1174,6 +1186,7 @@ class _LeftPanel extends StatelessWidget {
 
   final bool dead;
   final MarkType markType;
+  final ValueChanged<double> onHoldProgress;
   final VoidCallback onHoldDead;
   final VoidCallback onMark;
   final VoidCallback onHoldMark;
@@ -1181,38 +1194,51 @@ class _LeftPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          _BigButton(
-            icon: markIcon(markType),
-            label: markType.label,
-            hint: '길게=종류',
-            color: hexColor(markType.colorHex),
-            onTap: onMark,
-            onLongPress: onHoldMark,
+    // dp는 기기 밀도와 무관한 단위라 물리적 크기는 어디서나 비슷하지만,
+    // 화면 높이는 기기마다 달라서 남는 높이에 맞춰 잡고 최소/최대만 고정한다.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // 사망 : 적 : 거점 = 1 : 1.5 : 1.5 → 합이 4배
+        final base = ((constraints.maxHeight - 24) / 4).clamp(60.0, 104.0);
+        final actionSize = base * 1.5;
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+          child: Column(
+            // 위 / 가운데 / 아래로 떨어뜨려서 손이 가는 위치를 고정한다.
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              HoldButton(
+                glyph: dead ? '\u{1F503}' : '\u{1F480}',
+                label: dead ? '복귀' : '사망',
+                background: dead
+                    ? const Color(0xFF2E4A32)
+                    : const Color(0xFF3A3A3A),
+                size: base,
+                onProgress: onHoldProgress,
+                onHoldComplete: onHoldDead,
+              ),
+              _BigButton(
+                icon: markIcon(markType),
+                label: markType.label,
+                hint: '길게=종류',
+                color: hexColor(markType.colorHex),
+                size: actionSize,
+                onTap: onMark,
+                onLongPress: onHoldMark,
+              ),
+              _BigButton(
+                icon: Icons.flag,
+                label: '거점',
+                color: Colors.blueGrey,
+                size: actionSize,
+                onTap: onObjectives,
+              ),
+            ],
           ),
-          const SizedBox(height: 8),
-          _BigButton(
-            icon: Icons.flag,
-            label: '거점',
-            color: Colors.blueGrey,
-            onTap: onObjectives,
-          ),
-          // 사망 버튼은 성격이 다르므로 여백과 구분선으로 떼어 놓는다.
-          const SizedBox(height: 14),
-          Container(width: 60, height: 1, color: Colors.white24),
-          const SizedBox(height: 14),
-          HoldButton(
-            icon: dead ? Icons.refresh : Icons.personal_injury,
-            label: dead ? '복귀' : '사망',
-            color: dead ? Colors.greenAccent : Colors.redAccent,
-            onHoldComplete: onHoldDead,
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }
@@ -1353,6 +1379,7 @@ class _BigButton extends StatelessWidget {
     required this.icon,
     required this.label,
     required this.color,
+    required this.size,
     this.hint,
     this.onTap,
     this.onLongPress,
@@ -1362,6 +1389,7 @@ class _BigButton extends StatelessWidget {
   final String label;
   final String? hint;
   final Color color;
+  final double size;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
 
@@ -1375,13 +1403,13 @@ class _BigButton extends StatelessWidget {
         onTap: onTap,
         onLongPress: onLongPress,
         child: Container(
-          width: 88,
-          height: 64,
+          width: size,
+          height: size,
           alignment: Alignment.center,
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, color: Colors.white, size: 22),
+              Icon(icon, color: Colors.white, size: size * 0.32),
               Text(
                 label,
                 style: const TextStyle(

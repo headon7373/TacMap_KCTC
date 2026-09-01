@@ -5,6 +5,8 @@ import 'package:tacmap/widgets/team_status_bar.dart';
 Member member(String uid, String? teamId) => Member(
       uid: uid,
       callsign: uid,
+      number: '',
+      school: '',
       teamId: teamId,
       isHost: false,
       joinedAt: 0,

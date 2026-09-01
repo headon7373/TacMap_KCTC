@@ -25,7 +25,11 @@ class RoomService {
       List.generate(6, (_) => _random.nextInt(10)).join();
 
   /// 방을 만들고 기본 팀 4개를 함께 생성한다. 만든 사람이 방장이 된다.
-  Future<String> createRoom({required String callsign}) async {
+  Future<String> createRoom({
+    required String callsign,
+    String number = '',
+    String school = '',
+  }) async {
     String code = _newCode();
     // 아주 낮은 확률이지만 코드가 겹치면 다시 뽑는다.
     for (var attempt = 0; attempt < 5; attempt++) {
@@ -51,6 +55,8 @@ class RoomService {
       },
       'members/$uid': {
         'callsign': callsign,
+        'number': number,
+        'school': school,
         'isHost': true,
         'joinedAt': now,
       },
@@ -62,6 +68,8 @@ class RoomService {
   Future<void> joinRoom({
     required String code,
     required String callsign,
+    String number = '',
+    String school = '',
   }) async {
     final meta = await _room(code).child('meta').get();
     if (!meta.exists) {
@@ -69,6 +77,8 @@ class RoomService {
     }
     await _room(code).child('members/$uid').update({
       'callsign': callsign,
+      'number': number,
+      'school': school,
       'isHost': false,
       'joinedAt': ServerValue.timestamp,
     });
@@ -119,13 +129,19 @@ class RoomService {
   // 보안 규칙에서 teams 쓰기와 남의 members 쓰기는 방장(hostUid)만 허용된다.
   // 방장이 아닌 사람이 호출하면 서버가 거부한다.
 
-  /// 콜사인 변경. 본인 것은 누구나, 남의 것은 방장만 바꿀 수 있다.
-  Future<void> setCallsign({
+  /// 명단 수정. 본인 것은 누구나, 남의 것은 방장만 바꿀 수 있다.
+  Future<void> setMemberInfo({
     required String code,
     required String targetUid,
     required String callsign,
+    required String number,
+    required String school,
   }) =>
-      _room(code).child('members/$targetUid/callsign').set(callsign);
+      _room(code).child('members/$targetUid').update({
+        'callsign': callsign,
+        'number': number,
+        'school': school,
+      });
 
   /// 팀 배정. teamId를 null로 주면 미배정으로 되돌린다.
   Future<void> assignTeam({

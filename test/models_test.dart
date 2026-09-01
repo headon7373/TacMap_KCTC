@@ -87,4 +87,26 @@ void main() {
   test('기본 배경 지도는 등고선이다', () {
     expect(defaultTileSource.id, 'topo');
   });
+
+  group('Member 표기', () {
+    test('등번호가 있으면 이름 앞에 붙인다', () {
+      final m = Member.fromMap('uid', {
+        'callsign': '김철수',
+        'number': '7',
+        'school': '건국대',
+        'joinedAt': 1,
+      });
+
+      expect(m.displayName, '7 김철수');
+      expect(m.school, '건국대');
+    });
+
+    test('등번호가 없으면 이름만 쓴다', () {
+      final m = Member.fromMap('uid', {'callsign': '김철수', 'joinedAt': 1});
+
+      expect(m.displayName, '김철수');
+      expect(m.number, isEmpty);
+      expect(m.school, isEmpty);
+    });
+  });
 }
