@@ -65,7 +65,7 @@ void main() {
     });
 
     test('숫자가 아니면 거부한다', () {
-      expect(parseLatLng('좌표아님'), isNull);
+      expect(parseLatLng('김부리'), isNull);
     });
   });
 

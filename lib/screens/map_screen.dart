@@ -21,9 +21,8 @@ import '../widgets/hold_button.dart';
 import '../widgets/objective_marker.dart';
 import '../widgets/team_status_bar.dart';
 
-/// 경기장 좌표를 아직 입력하지 않았을 때 지도가 열리는 위치.
-/// 한반도 중앙 부근이며, 운영자가 기준점을 입력하면 거기로 옮겨간다.
-const fallbackCenter = LatLng(36.5, 127.8);
+/// KCTC 도시지역 훈련장(강원 인제군 상남면 김부리). 대회 기준점.
+const fallbackCenter = LatLng(37.9142876, 128.1818486);
 
 /// 적 표식이 살아 있는 시간. 오래된 적 위치는 오히려 판단을 흐린다.
 const markLifetime = Duration(seconds: 60);
@@ -654,7 +653,7 @@ class _MapScreenState extends State<MapScreen> {
         ),
       );
 
-  /// 산이나 외곽 지역은 통신이 끊기는 구간이 있다. 필드 일대를 미리 받아둔다.
+  /// KCTC 일대는 산악 지형이라 통신이 끊기는 구간이 있다. 필드 일대를 미리 받아둔다.
   Future<void> _downloadTiles() async {
     const radius = 1200.0;
     const minZoom = 13;

@@ -1,4 +1,6 @@
-# 기능 체크리스트
+# TacMap KCTC 기능 체크리스트
+
+기준점: KCTC 도시지역 훈련장 `37.9142876, 128.1818486` (강원 인제군 상남면 김부리)
 
 
 
@@ -14,7 +16,7 @@
 
 ## 1단계 · Firebase 연결 + 방/참가 ✅
 
-- [x] Firebase 프로젝트 생성
+- [x] Firebase 프로젝트 `tacmap-kctc` 생성
 - [x] Realtime Database (asia-southeast1)
 - [x] 익명 로그인 사용 설정
 - [x] 보안 규칙 배포 (`database.rules.json`)

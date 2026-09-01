@@ -7,7 +7,7 @@ void main() {
   group('FieldPreset', () {
     final preset = FieldPreset(
       id: 'p1',
-      name: '예시 배치',
+      name: 'KCTC 도시지역',
       createdBy: 'uid-1',
       objectives: [
         (name: 'A', point: const LatLng(37.91, 128.18)),
@@ -24,7 +24,7 @@ void main() {
     test('저장했다가 그대로 다시 읽는다', () {
       final restored = FieldPreset.fromMap('p1', preset.toMap());
 
-      expect(restored.name, '예시 배치');
+      expect(restored.name, 'KCTC 도시지역');
       expect(restored.objectives.map((o) => o.name), ['A', 'B']);
       expect(restored.objectives.first.point.latitude, closeTo(37.91, 1e-9));
       expect(restored.spawns['좌익']!.longitude, closeTo(128.17, 1e-9));
@@ -64,9 +64,14 @@ void main() {
   });
 
   group('arena', () {
-    test('경기장 좌표는 앱에 박혀 있지 않고 운영자가 입력한다', () {
-      expect(arenaById('a').name, 'A 경기장');
-      expect(arenaById('a').defaultCenter, isNull);
+    test('A 경기장은 KCTC 도시지역 훈련장 좌표를 갖는다', () {
+      final a = arenaById('a');
+      expect(a.name, 'A 경기장');
+      expect(a.defaultCenter!.latitude, closeTo(37.9142876, 1e-7));
+      expect(a.defaultCenter!.longitude, closeTo(128.1818486, 1e-7));
+    });
+
+    test('B 경기장은 좌표가 비어 있어 어드민이 입력한다', () {
       expect(arenaById('b').defaultCenter, isNull);
     });
 

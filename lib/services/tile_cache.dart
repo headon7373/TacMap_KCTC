@@ -12,7 +12,7 @@ import 'package:path_provider/path_provider.dart';
 
 /// 지도 타일을 기기에 저장해 두고 먼저 꺼내 쓴다.
 ///
-/// 산악 지형에서는 통신이 끊기는 구간이 있다. 그때 타일을 못 받으면
+/// KCTC 일대는 산악 지형이라 통신이 끊기는 구간이 있다. 그때 타일을 못 받으면
 /// 지도가 회색으로 비어버리는데, 그러면 상황판으로서 쓸모가 없다.
 /// 대회 전에 필드 영역을 미리 받아두면 통신이 끊겨도 지도는 그대로 보인다.
 class TileCache {
@@ -41,7 +41,7 @@ class TileCache {
 
     try {
       final response = await http
-          .get(Uri.parse(url), headers: {'User-Agent': 'TacMap/1.0'})
+          .get(Uri.parse(url), headers: {'User-Agent': 'TacMapKCTC/1.0'})
           .timeout(const Duration(seconds: 15));
       if (response.statusCode != 200 || response.bodyBytes.isEmpty) return null;
       await file.writeAsBytes(response.bodyBytes);
