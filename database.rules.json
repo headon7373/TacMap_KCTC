@@ -1,0 +1,65 @@
+{
+  "rules": {
+    "presets": {
+      ".read": "auth != null",
+      "$presetId": {
+        ".write": "auth != null && (!data.exists() || data.child('createdBy').val() === auth.uid)"
+      }
+    },
+
+    "rooms": {
+      "$code": {
+        "meta": {
+          ".read": "auth != null",
+          ".write": "auth != null && (!data.exists() || data.child('hostUid').val() === auth.uid)"
+        },
+
+        "members": {
+          ".read": "auth != null && data.child(auth.uid).exists()",
+          "$uid": {
+            ".read": "auth != null",
+            ".write": "auth != null && ($uid === auth.uid || root.child('rooms').child($code).child('meta').child('hostUid').val() === auth.uid)",
+            ".validate": "newData.hasChildren(['callsign', 'joinedAt']) && newData.child('callsign').isString() && newData.child('callsign').val().length <= 12"
+          }
+        },
+
+        "teams": {
+          ".read": "auth != null && root.child('rooms').child($code).child('members').child(auth.uid).exists()",
+          ".write": "auth != null && (!root.child('rooms').child($code).child('meta').exists() || root.child('rooms').child($code).child('meta').child('hostUid').val() === auth.uid)"
+        },
+
+        "live": {
+          ".read": "auth != null && root.child('rooms').child($code).child('members').child(auth.uid).exists()",
+          "$uid": {
+            ".write": "auth != null && $uid === auth.uid"
+          }
+        },
+
+        "boundary": {
+          ".read": "auth != null && root.child('rooms').child($code).child('members').child(auth.uid).exists()",
+          ".write": "auth != null && root.child('rooms').child($code).child('meta').child('hostUid').val() === auth.uid"
+        },
+
+        "spawns": {
+          ".read": "auth != null && root.child('rooms').child($code).child('members').child(auth.uid).exists()",
+          ".write": "auth != null && root.child('rooms').child($code).child('meta').child('hostUid').val() === auth.uid"
+        },
+
+        "markers": {
+          ".read": "auth != null && root.child('rooms').child($code).child('members').child(auth.uid).exists()",
+          ".write": "auth != null && root.child('rooms').child($code).child('members').child(auth.uid).exists()"
+        },
+
+        "objectives": {
+          ".read": "auth != null && root.child('rooms').child($code).child('members').child(auth.uid).exists()",
+          ".write": "auth != null && root.child('rooms').child($code).child('members').child(auth.uid).exists()"
+        },
+
+        "events": {
+          ".read": "auth != null && root.child('rooms').child($code).child('members').child(auth.uid).exists()",
+          ".write": "auth != null && root.child('rooms').child($code).child('members').child(auth.uid).exists()"
+        }
+      }
+    }
+  }
+}
