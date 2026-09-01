@@ -70,6 +70,7 @@ class RoomService {
     required String callsign,
     String number = '',
     String school = '',
+    bool spectator = false,
   }) async {
     final meta = await _room(code).child('meta').get();
     if (!meta.exists) {
@@ -80,6 +81,7 @@ class RoomService {
       'number': number,
       'school': school,
       'isHost': false,
+      'spectator': spectator,
       'joinedAt': ServerValue.timestamp,
     });
   }
@@ -187,6 +189,14 @@ class RoomService {
     }
     await _room(code).child('teams/$teamId').remove();
   }
+
+  /// 관전 여부 전환. 관전자는 위치를 보내지 않는다.
+  Future<void> setSpectator({
+    required String code,
+    required String targetUid,
+    required bool spectator,
+  }) =>
+      _room(code).child('members/$targetUid/spectator').set(spectator);
 
   /// 게임 상태 전환. 인원이 다 안 찼어도 방장이 언제든 시작할 수 있다.
   Future<void> setRoomState({required String code, required String state}) =>

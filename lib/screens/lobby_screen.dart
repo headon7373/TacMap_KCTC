@@ -407,6 +407,21 @@ class _RosterPane extends StatelessWidget {
               ),
               if (isHost) ...[
                 ListTile(
+                  leading: Icon(
+                    member.spectator ? Icons.videocam_off : Icons.videocam,
+                  ),
+                  title: Text(member.spectator ? '경기 참가로 전환' : '관전으로 전환'),
+                  subtitle: const Text('관전자는 위치를 보내지 않습니다'),
+                  onTap: () async {
+                    Navigator.of(sheetContext).pop();
+                    await service.setSpectator(
+                      code: code,
+                      targetUid: member.uid,
+                      spectator: !member.spectator,
+                    );
+                  },
+                ),
+                ListTile(
                   leading: const Icon(Icons.swap_horiz),
                   title: const Text('분대 배정'),
                   onTap: () {
@@ -638,6 +653,11 @@ class _RosterRow extends StatelessWidget {
                   ),
                   if (member.isHost)
                     const Icon(Icons.star, size: 12, color: Colors.amber),
+                  if (member.spectator)
+                    const Padding(
+                      padding: EdgeInsets.only(left: 4),
+                      child: Icon(Icons.videocam, size: 12, color: Colors.cyan),
+                    ),
                 ],
               ),
             ),

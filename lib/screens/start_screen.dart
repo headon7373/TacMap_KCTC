@@ -24,6 +24,7 @@ class _StartScreenState extends State<StartScreen> {
   final _code = TextEditingController();
 
   bool _busy = false;
+  bool _spectator = false;
   String? _error;
 
   @override
@@ -228,6 +229,7 @@ class _StartScreenState extends State<StartScreen> {
                                             callsign: _name.text.trim(),
                                             number: _number.text.trim(),
                                             school: _school.text.trim(),
+                                            spectator: _spectator,
                                           );
                                           return code;
                                         }),
@@ -239,6 +241,17 @@ class _StartScreenState extends State<StartScreen> {
                       ),
                     ),
                   ],
+                ),
+              ),
+              CheckboxListTile(
+                value: _spectator,
+                onChanged: (v) => setState(() => _spectator = v ?? false),
+                controlAffinity: ListTileControlAffinity.leading,
+                dense: true,
+                contentPadding: EdgeInsets.zero,
+                title: const Text('관전으로 참가'),
+                subtitle: const Text(
+                  '경기에 뛰지 않고 상황만 봅니다. 내 위치는 보내지 않고, 거점 상태는 갱신할 수 있습니다',
                 ),
               ),
               if (_busy) const LinearProgressIndicator(),

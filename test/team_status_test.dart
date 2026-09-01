@@ -9,6 +9,7 @@ Member member(String uid, String? teamId) => Member(
       school: '',
       teamId: teamId,
       isHost: false,
+      spectator: false,
       joinedAt: 0,
     );
 

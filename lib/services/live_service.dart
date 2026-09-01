@@ -177,6 +177,33 @@ class LiveService {
   Future<void> removeObjective(String id) =>
       _room.child('objectives/$id').remove();
 
+  // ---- 라운드 운영 ----
+
+  /// 라운드를 다시 시작한다.
+  /// 사망 표시를 모두 풀고, 적 표식과 기록을 지우고, 거점을 중립으로 되돌린다.
+  /// 리스폰·경계·거점 위치 같은 필드 배치는 그대로 둔다.
+  Future<void> resetRound({required List<String> memberUids}) async {
+    for (final id in memberUids) {
+      await _room.child('live/$id/dead').set(false);
+    }
+    _dead = false;
+
+    await _room.child('markers').remove();
+    await _room.child('events').remove();
+
+    final objectives = await _room.child('objectives').get();
+    final value = objectives.value;
+    if (value is Map) {
+      for (final key in value.keys) {
+        await _room.child('objectives/$key').update({
+          'owner': Owner.neutral.name,
+          'byCallsign': '',
+          'ts': ServerValue.timestamp,
+        });
+      }
+    }
+  }
+
   /// 운영자용 전체 기록. 누가 언제 무엇을 했는지 되짚을 때 쓴다.
   /// 점령 상태를 잘못 눌러도 누가 바꿨는지 남기 때문에 되돌릴 수 있다.
   Future<List<GameEvent>> fullLog({int limit = 500}) async {

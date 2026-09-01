@@ -63,6 +63,7 @@ class Member {
     required this.school,
     required this.teamId,
     required this.isHost,
+    required this.spectator,
     required this.joinedAt,
   });
 
@@ -80,6 +81,10 @@ class Member {
   /// 아직 팀 배정 전이면 null
   final String? teamId;
   final bool isHost;
+
+  /// 관전자는 위치를 보내지 않고 화면만 본다. 생존 집계에서도 빠진다.
+  /// 경기에 안 뛰는 인원이 무전을 듣고 거점 상태를 갱신해 주는 역할을 맡는다.
+  final bool spectator;
   final int joinedAt;
 
   /// 명단에 쓰는 한 줄 표기. 등번호가 있으면 앞에 붙인다.
@@ -94,6 +99,7 @@ class Member {
       school: (map['school'] ?? '') as String,
       teamId: map['teamId'] as String?,
       isHost: (map['isHost'] ?? false) as bool,
+      spectator: (map['spectator'] ?? false) as bool,
       joinedAt: (map['joinedAt'] as num?)?.toInt() ?? 0,
     );
   }

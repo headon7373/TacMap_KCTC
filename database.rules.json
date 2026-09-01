@@ -31,7 +31,7 @@
         "live": {
           ".read": "auth != null && root.child('rooms').child($code).child('members').child(auth.uid).exists()",
           "$uid": {
-            ".write": "auth != null && $uid === auth.uid"
+            ".write": "auth != null && ($uid === auth.uid || root.child('rooms').child($code).child('meta').child('hostUid').val() === auth.uid)"
           }
         },
 

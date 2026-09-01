@@ -10,17 +10,20 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../models/arena.dart';
 import '../models/live.dart';
+import '../models/stats.dart';
 import '../models/room.dart';
 import '../models/tile_source.dart';
 import '../services/live_service.dart';
 import '../services/room_service.dart';
+import '../services/tile_cache.dart';
 import '../widgets/heading_marker.dart';
 import '../widgets/hold_button.dart';
 import '../widgets/objective_marker.dart';
 import '../widgets/team_status_bar.dart';
 
-/// KCTC 도시지역 훈련장(강원 인제군 상남면 김부리). 대회 기준점.
-const fallbackCenter = LatLng(37.9142876, 128.1818486);
+/// 경기장 좌표를 아직 입력하지 않았을 때 지도가 열리는 위치.
+/// 한반도 중앙 부근이며, 운영자가 기준점을 입력하면 거기로 옮겨간다.
+const fallbackCenter = LatLng(36.5, 127.8);
 
 /// 적 표식이 살아 있는 시간. 오래된 적 위치는 오히려 판단을 흐린다.
 const markLifetime = Duration(seconds: 60);
@@ -179,7 +182,13 @@ class _MapScreenState extends State<MapScreen> {
     }));
   }
 
+  bool get _amSpectator => _me?.spectator ?? false;
+
   Future<void> _startSharing() async {
+    if (_amSpectator) {
+      if (mounted) _showToast('관전 모드 - 내 위치는 보내지 않습니다');
+      return;
+    }
     try {
       await _live.startSharing();
       if (mounted) setState(() => _sharing = true);
@@ -462,6 +471,25 @@ class _MapScreenState extends State<MapScreen> {
                   ),
                 ),
               const Divider(),
+              const ListTile(title: Text('라운드 운영')),
+              ListTile(
+                leading: const Icon(Icons.restart_alt, color: Colors.orange),
+                title: const Text('라운드 초기화'),
+                subtitle: const Text('사망 해제 · 적 표식과 기록 삭제 · 거점 중립으로'),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  _resetRound();
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.bar_chart),
+                title: const Text('전적 보기'),
+                subtitle: const Text('사망 집계와 거점 변경 횟수'),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  _openStats();
+                },
+              ),
               ListTile(
                 leading: const Icon(Icons.history),
                 title: const Text('전체 기록'),
@@ -469,6 +497,16 @@ class _MapScreenState extends State<MapScreen> {
                 onTap: () {
                   Navigator.of(sheetContext).pop();
                   _openLog();
+                },
+              ),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.download_for_offline),
+                title: const Text('지도 미리 받기'),
+                subtitle: const Text('통신이 끊겨도 지도가 보이도록 저장'),
+                onTap: () {
+                  Navigator.of(sheetContext).pop();
+                  _downloadTiles();
                 },
               ),
               const Divider(),
@@ -517,6 +555,194 @@ class _MapScreenState extends State<MapScreen> {
       await _live.setBoundary(next);
     }
     _showToast('경계 점 ${next.length}개');
+  }
+
+  /// 경기당 15분씩 여러 판을 치르므로, 판이 끝나면 상태를 되돌려야 한다.
+  /// 거점·리스폰·경계 같은 필드 배치는 그대로 두고 전투 결과만 지운다.
+  Future<void> _resetRound() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('라운드 초기화'),
+        content: const Text(
+          '전원 사망 표시를 풀고, 적 표식과 기록을 지우고, 거점을 중립으로 되돌립니다.\n'
+          '거점 위치·리스폰·경계는 그대로 유지됩니다.\n\n'
+          '전적을 남기려면 먼저 전적 보기에서 확인하세요.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('초기화'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+
+    await _live.resetRound(memberUids: _members.map((m) => m.uid).toList());
+    _seenEvents.clear();
+    _eventsPrimed = false;
+    if (mounted) _showToast('라운드 초기화 완료');
+  }
+
+  /// 판이 끝나고 팀원들에게 보여줄 숫자.
+  Future<void> _openStats() async {
+    final log = await _live.fullLog();
+    if (!mounted) return;
+    final stats = buildStats(events: log, teams: _teams);
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (sheetContext) => SafeArea(
+        child: DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.9,
+          builder: (context, controller) => ListView(
+            controller: controller,
+            children: [
+              ListTile(
+                leading: const Icon(Icons.bar_chart),
+                title: const Text('전적'),
+                subtitle: Text(
+                  stats.duration == Duration.zero
+                      ? '기록 없음'
+                      : '경기 시간 ${stats.duration.inMinutes}분 '
+                          '${stats.duration.inSeconds % 60}초',
+                ),
+              ),
+              const Divider(height: 1),
+              if (stats.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Text('아직 집계할 기록이 없습니다.'),
+                )
+              else ...[
+                _statHeader('분대별 사망 (총 ${stats.totalDeaths}명)'),
+                for (final e in ranked(stats.deathsBySquad))
+                  _statRow(e.key, '${e.value}명'),
+                _statHeader('개인별 사망'),
+                for (final e in ranked(stats.deathsByPlayer))
+                  _statRow(e.key, '${e.value}회'),
+                _statHeader('거점 상태 변경 (총 ${stats.objectiveChanges}회)'),
+                for (final e in ranked(stats.changesByPlayer))
+                  _statRow(e.key, '${e.value}회'),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _statHeader(String title) => Container(
+        color: Colors.white10,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+      );
+
+  Widget _statRow(String label, String value) => ListTile(
+        dense: true,
+        title: Text(label),
+        trailing: Text(
+          value,
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
+        ),
+      );
+
+  /// 산이나 외곽 지역은 통신이 끊기는 구간이 있다. 필드 일대를 미리 받아둔다.
+  Future<void> _downloadTiles() async {
+    const radius = 1200.0;
+    const minZoom = 13;
+    const maxZoom = 18;
+
+    final count = TileCache.instance.estimateTileCount(
+      center: _basePoint,
+      radiusMeters: radius,
+      minZoom: minZoom,
+      maxZoom: maxZoom,
+    );
+
+    final start = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('${_source.label} 미리 받기'),
+        content: Text(
+          '기준점 반경 약 ${(radius / 1000).toStringAsFixed(1)}km를 저장합니다.\n'
+          '타일 약 $count장 · 몇 분 걸릴 수 있습니다.\n\n'
+          '와이파이에서 미리 받아두세요. 지도를 바꿔 쓸 계획이면 지도별로 각각 받아야 합니다.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('취소'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: const Text('받기'),
+          ),
+        ],
+      ),
+    );
+    if (start != true || !mounted) return;
+
+    var cancelled = false;
+    final progress =
+        ValueNotifier<({int done, int total})>((done: 0, total: count));
+
+    unawaited(showDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('지도 받는 중'),
+        content: ValueListenableBuilder<({int done, int total})>(
+          valueListenable: progress,
+          builder: (context, value, _) => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              LinearProgressIndicator(
+                value: value.total == 0 ? 0 : value.done / value.total,
+              ),
+              const SizedBox(height: 12),
+              Text('${value.done} / ${value.total}'),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              cancelled = true;
+              Navigator.of(dialogContext).pop();
+            },
+            child: const Text('중단'),
+          ),
+        ],
+      ),
+    ));
+
+    await TileCache.instance.downloadArea(
+      sourceId: _source.id,
+      urlTemplate: _source.urlTemplate,
+      center: _basePoint,
+      radiusMeters: radius,
+      minZoom: minZoom,
+      maxZoom: maxZoom,
+      onProgress: (done, total) => progress.value = (done: done, total: total),
+      isCancelled: () => cancelled,
+    );
+
+    final bytes = await TileCache.instance.cachedBytes(_source.id);
+    if (!mounted) return;
+    if (!cancelled) Navigator.of(context).pop();
+    _showToast(
+      cancelled
+          ? '중단됨 (받은 만큼은 저장됨)'
+          : '저장 완료 · ${(bytes / 1024 / 1024).toStringAsFixed(1)}MB',
+    );
   }
 
   /// 운영자용 전체 기록. 시각까지 찍어서 사후에 되짚을 수 있게 한다.
@@ -603,7 +829,7 @@ class _MapScreenState extends State<MapScreen> {
   Future<void> _savePreset() async {
     final name = await _promptText(
       title: '프리셋 이름',
-      hint: 'KCTC 도시지역 1안',
+      hint: '경기장 1안',
       maxLength: 20,
     );
     if (name == null || name.isEmpty) return;
@@ -762,7 +988,9 @@ class _MapScreenState extends State<MapScreen> {
 
   List<Marker> _memberMarkers() {
     final markers = <Marker>[];
+    final mySquad = _me?.teamId;
     for (final m in _members) {
+      if (m.spectator) continue;
       final pos = _positions[m.uid];
       if (pos == null) continue;
       final team = _teamOf(m);
@@ -781,6 +1009,7 @@ class _MapScreenState extends State<MapScreen> {
             headingDegrees: heading,
             label: m.uid == _uid ? '나' : m.callsign,
             dead: pos.dead,
+            sameSquad: mySquad != null && m.teamId == mySquad,
             size: 72,
           ),
         ),
@@ -883,7 +1112,7 @@ class _MapScreenState extends State<MapScreen> {
     };
     final statuses = buildTeamStatuses(
       teams: _teams,
-      members: _members,
+      members: _members.where((m) => !m.spectator).toList(),
       deadUids: deadUids,
     );
 
@@ -917,6 +1146,8 @@ class _MapScreenState extends State<MapScreen> {
                 urlTemplate: _source.urlTemplate,
                 userAgentPackageName: 'com.ocy.tacmap',
                 maxNativeZoom: _source.maxZoom,
+                // 미리 받아둔 타일이 있으면 통신이 끊겨도 지도가 보인다.
+                tileProvider: CachedTileProvider(sourceId: _source.id),
               ),
               if (_boundary.length >= 3)
                 PolygonLayer(

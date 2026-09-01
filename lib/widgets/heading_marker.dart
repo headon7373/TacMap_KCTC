@@ -12,6 +12,7 @@ class HeadingMarker extends StatelessWidget {
     this.headingDegrees,
     this.label,
     this.dead = false,
+    this.sameSquad = false,
     this.size = 64,
   });
 
@@ -21,6 +22,9 @@ class HeadingMarker extends StatelessWidget {
   final double? headingDegrees;
   final String? label;
   final bool dead;
+
+  /// 같은 분대면 더 강하게 빛나게 한다. 15명이 뒤섞이면 색만으로는 구분이 늦다.
+  final bool sameSquad;
   final double size;
 
   @override
@@ -41,12 +45,26 @@ class HeadingMarker extends StatelessWidget {
               ),
             ),
           Container(
-            width: 16,
-            height: 16,
+            width: sameSquad ? 18 : 16,
+            height: sameSquad ? 18 : 16,
             decoration: BoxDecoration(
               color: effective,
               shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 2.5),
+              border: Border.all(
+                color: Colors.white,
+                width: sameSquad ? 3 : 2,
+              ),
+              boxShadow: dead
+                  ? null
+                  : [
+                      BoxShadow(
+                        color: effective.withValues(
+                          alpha: sameSquad ? 0.95 : 0.5,
+                        ),
+                        blurRadius: sameSquad ? 14 : 7,
+                        spreadRadius: sameSquad ? 3 : 1,
+                      ),
+                    ],
             ),
           ),
           if (dead)

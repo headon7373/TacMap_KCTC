@@ -20,18 +20,12 @@ class Arena {
   String get lngKey => 'arena_${id}_lng';
 }
 
-/// KCTC 도시지역 훈련장 좌표는 확인된 값. B는 현장 확인 후 입력한다.
+/// 경기장 좌표는 앱에 넣어두지 않는다. 대회마다 장소가 달라지기도 하고,
+/// 특정 장소를 코드에 박아두면 앱의 쓰임이 그 장소에 묶인다.
+/// 운영자가 첫 실행 때 기준점 버튼을 길게 눌러 좌표를 입력하면 기기에 저장된다.
 const arenas = <Arena>[
-  Arena(
-    id: 'a',
-    name: 'A 경기장',
-    defaultCenter: LatLng(37.9142876, 128.1818486),
-  ),
-  Arena(
-    id: 'b',
-    name: 'B 경기장',
-    defaultCenter: null,
-  ),
+  Arena(id: 'a', name: 'A 경기장', defaultCenter: null),
+  Arena(id: 'b', name: 'B 경기장', defaultCenter: null),
 ];
 
 Arena arenaById(String? id) =>
